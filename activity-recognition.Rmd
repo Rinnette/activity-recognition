@@ -1,0 +1,79 @@
+---
+title: "Quantifying how well a weight lifting exercise is performed"
+author: "Rinnette N. Ramdhanie"
+date: "13 January 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r loadLibs, warning = FALSE, message = FALSE, echo = FALSE}
+        library(caret)
+        library(corrplot)
+```
+
+## Overview
+
+What is the question that is going to be answered.
+
+
+## Loading the data
+
+The data came from ...wherever... located at ...link...
+
+```{r loaddata}
+        training <- read.csv("../pml-training.csv")
+        testing <- read.csv("../pml-testing.csv")
+```
+
+## Exploratory analysis
+
+
+## Processing the Data
+
+```{r}
+        # Remove first 7 columns
+        train <- training[, -c(1:7)]
+        test <- testing[, -c(1:7)]
+        
+        # Remove columns with near zero variance
+        train <- train[ , -nearZeroVar(train)]
+        test <- test[ , -nearZeroVar(test)]
+        
+        # Remove columns with more than 90% NA's
+        train <- train[ , which(colMeans(is.na(train)) < 0.9)]
+        test <- test[ , which(colMeans(is.na(test)) < 0.9)]
+```
+
+## Partition the training dataset
+
+```{r dataPartition}
+        inTrain <- createDataPartition(train$classe, p = 0.70, list = FALSE)
+        trainset <- train[inTrain, ]
+        validset <- train[-inTrain, ]
+```
+
+## Fit Models
+
+
+```{r fitModels}
+        traincontrol <- trainControl(method = "cv", number = 5)
+
+        set.seed(999)
+        modRFtr <- train(classe ~ ., data=trainset, method = "rf", 
+                         trControl = traincontrol)
+
+        set.seed(999)
+        modGBMtr <- train(classe ~ ., data=trainset, method = "gbm", 
+                          trControl = traincontrol)
+        
+        set.seed(999)
+        modCTtr <- train(classe ~ ., data=trainset, method = "rpart", 
+                         trControl = traincontrol)
+        
+        
+```
+
+
