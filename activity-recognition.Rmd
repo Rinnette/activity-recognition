@@ -29,6 +29,12 @@ The data came from ...wherever... located at ...link...
 ```
 
 ## Exploratory analysis
+```{r}
+        corrMatrix <- cor(train[, -53])
+        corrplot(corrMatrix, method = "color", type = "lower", order = "AOE")
+
+```
+Therefore preprcoess, method pca as there are some highly correlated variables.
 
 
 ## Processing the Data
@@ -56,24 +62,59 @@ The data came from ...wherever... located at ...link...
 ```
 
 ## Fit Models
+Apply PCA to trainset and validset
 
+```{r preProcSets}
+        preProctrain <- preProcess(trainset, method = "pca")
+        preProcvalid <- preProcess(validset, method = "pca")
+
+```
+
+```{r fitModelsPP}
+        traincontrol <- trainControl(method = "cv", number = 5)
+
+        set.seed(999)
+        RFpreProctrain <- train(classe ~ ., data = preProctrain, method = "rf", 
+                        trControl = traincontrol)
+
+        set.seed(999)
+        GBMpreProctrain <- train(classe ~ ., data = preProctrain, method = "gbm", 
+                        trControl = traincontrol)
+        
+        set.seed(999)
+        CTpreProctrain <- train(classe ~ ., data = preProctrain, method = "rpart", 
+                         trControl = traincontrol)
+
+```
+
+SUmmarize accuracies in table and select the highest. Apply to preProcvalid dataset.
+
+```{r fitModelvalid}
+        #RFpreProcvalid <- 
+
+```
+Check test error.
+
+Decision made to use data that was not PCAed.
 
 ```{r fitModels}
         traincontrol <- trainControl(method = "cv", number = 5)
 
         set.seed(999)
-        modRFtr <- train(classe ~ ., data=trainset, method = "rf", 
-                         trControl = traincontrol)
+        RFpreProctrain <- train(classe ~ ., data = trainset, method = "rf", 
+                        trControl = traincontrol)
 
         set.seed(999)
-        modGBMtr <- train(classe ~ ., data=trainset, method = "gbm", 
-                          trControl = traincontrol)
+        GBMpreProctrain <- train(classe ~ ., data = trainset, method = "gbm", 
+                        trControl = traincontrol)
         
         set.seed(999)
-        modCTtr <- train(classe ~ ., data=trainset, method = "rpart", 
+        CTpreProctrain <- train(classe ~ ., data = trainset, method = "rpart", 
                          trControl = traincontrol)
-        
-        
+
 ```
+Compare accuracies and errors to previous models in same table.
 
+Select model and run on validset data.  Compare with previous values.
 
+Use model on test data.
