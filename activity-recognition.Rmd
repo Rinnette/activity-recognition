@@ -34,7 +34,7 @@ The data came from ...wherever... located at ...link...
         corrplot(corrMatrix, method = "color", type = "lower", order = "AOE")
 
 ```
-Therefore preprcoess, method pca as there are some highly correlated variables.
+Therefore preprocess, method pca as there are some highly correlated variables. USed to reduce the number if variables to reduce overfitting and make it computationally simpler.
 
 
 ## Processing the Data
@@ -65,56 +65,76 @@ Therefore preprcoess, method pca as there are some highly correlated variables.
 Apply PCA to trainset and validset
 
 ```{r preProcSets}
-        preProctrain <- preProcess(trainset, method = "pca")
-        preProcvalid <- preProcess(validset, method = "pca")
-
+        preProctrain <- preProcess(trainset[,-53], method = "pca")
+        trainPP <- predict(preProctrain, trainset)
+        preProcvalid <- preProcess(validset[,-53], method = "pca")
+        validPP <- predict(preProcvalid, validset)
 ```
 
-```{r fitModelsPP}
+```{r fitModelPP}
         traincontrol <- trainControl(method = "cv", number = 5)
 
         set.seed(999)
-        RFpreProctrain <- train(classe ~ ., data = preProctrain, method = "rf", 
-                        trControl = traincontrol)
-
-        set.seed(999)
-        GBMpreProctrain <- train(classe ~ ., data = preProctrain, method = "gbm", 
-                        trControl = traincontrol)
+        RFtrainPP <- train(classe ~ ., data = trainPP, method = "rf", 
+                        trControl = traincontrol) #.971
+        RFtrainPP
         
         set.seed(999)
-        CTpreProctrain <- train(classe ~ ., data = preProctrain, method = "rpart", 
-                         trControl = traincontrol)
+        GBMtrainPP <- train(classe ~ ., data = trainPP, method = "gbm", 
+                       trControl = traincontrol) #.814
+        GBMtrainPP
+        
+        set.seed(999)
+        CTtrainPP <- train(classe ~ ., data = trainPP, method = "rpart", 
+                        trControl = traincontrol) #.425
+        CTtrainPP
+```
+
+SUmmarize accuracies in table and select the highest. Apply to validPP dataset.
+Predict new values using valid preprocessed dataset ie. validPP.
+
+```{r predvalidPP}
+        predRF <- predict(RFtrainPP,validPP)
+        confusionMatrix(predRF, validPP$classe)
+        #validPP$predRight <- pred==validPP$classe
+        #table(pred, validPP$classe)
 
 ```
 
-SUmmarize accuracies in table and select the highest. Apply to preProcvalid dataset.
-
-```{r fitModelvalid}
-        #RFpreProcvalid <- 
-
-```
-Check test error.
-
-Decision made to use data that was not PCAed.
+Decision made to use data that was not PCAed. since information was lost
 
 ```{r fitModels}
         traincontrol <- trainControl(method = "cv", number = 5)
 
         set.seed(999)
-        RFpreProctrain <- train(classe ~ ., data = trainset, method = "rf", 
-                        trControl = traincontrol)
-
-        set.seed(999)
-        GBMpreProctrain <- train(classe ~ ., data = trainset, method = "gbm", 
-                        trControl = traincontrol)
+        RFtrain <- train(classe ~ ., data = trainset, method = "rf", 
+                        trControl = traincontrol) #.991
+        RFtrain
         
         set.seed(999)
-        CTpreProctrain <- train(classe ~ ., data = trainset, method = "rpart", 
-                         trControl = traincontrol)
+        GBMtrain <- train(classe ~ ., data = trainset, method = "gbm", 
+                       trControl = traincontrol) #.
+        GBMtrain
+        
+        set.seed(999)
+        CTtrain <- train(classe ~ ., data = trainset, method = "rpart", 
+                        trControl = traincontrol) #
+        CTtrain
 
 ```
 Compare accuracies and errors to previous models in same table.
 
 Select model and run on validset data.  Compare with previous values.
 
+```{r predvalid}
+        predvalidRF <- predict(RFtrain, validset)
+        confusionMatrix(predvalidRF, validset$classe) #0.9931
+        #validPP$predRight <- pred==validPP$classe
+        #table(pred, validPP$classe)
+
+```
+
 Use model on test data.
+```{r predtest}
+        predict(RFtrain, test)
+```
