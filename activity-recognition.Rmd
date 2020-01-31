@@ -28,32 +28,64 @@ The data came from ...wherever... located at ...link...
         testing <- read.csv("../pml-testing.csv")
 ```
 
-## Exploratory analysis
+## Exploratory analysis & Data processing
+The structure of the dataset was checked as well as dimensions.
+
 ```{r}
-        corrMatrix <- cor(train[, -53])
-        corrplot(corrMatrix, method = "color", type = "lower", order = "AOE")
+        str(training)
+        dim(training); dim(testing)
 
 ```
-Therefore preprocess, method pca as there are some highly correlated variables. USed to reduce the number if variables to reduce overfitting and make it computationally simpler.
+There are 160 variables therefore these need to be checked to determine if all the variables should be used in the models.  The following was done:
 
+1.The first seven columns of the dataset unnecessary for fitting the model as it contains information the names of the persons involved in the exercise and time stamps. 
 
-## Processing the Data
-
-```{r}
+```{r rmFirst7}
         # Remove first 7 columns
         train <- training[, -c(1:7)]
         test <- testing[, -c(1:7)]
-        
+```
+
+2. The variances of the values in each column was checked and the column removed if its variance was near zero.
+
+```{r rmNearZero}
         # Remove columns with near zero variance
         train <- train[ , -nearZeroVar(train)]
         test <- test[ , -nearZeroVar(test)]
-        
+```
+
+3. Some columns contained more than 97% NAs even after removal of near zero variance columns.  
+```{r checkNAs}
+        # Get sum of NAs in each column
+                colSums(is.na(train))
+```
+
+Note that all the columns with NAs contain the same amount ie. 19 216 NAs, which is over 97% of the total number of values in the column.  It was decided that these columns will be removed instead of replacing the NAs with 0's,  as the presence of so many columns with 0's may skew the model.
+
+```{r rmNAs}
         # Remove columns with more than 90% NA's
         train <- train[ , which(colMeans(is.na(train)) < 0.9)]
         test <- test[ , which(colMeans(is.na(test)) < 0.9)]
 ```
 
+The number of variables has been reduced to 53 including the outcome variable *classe*.
+
+Correlation among variables was then checked to determine whether the number of variables could be further reduced as not all the variables may be necessary for the model.  The *classe* variable was not included in the correlation matrix.  Values were plotted where the darkest values show correlation close to 1 with blue representing negative correlation and red representing positive correlation.
+
+```{r}
+        corrMatrix <- cor(train[, -53])
+        corrplot(corrMatrix, method = "color", type = "lower", order = "AOE")
+
+```
+The plot shows that several variables are highly correlated therefore the preprocessing method, Principle Component Analysis (PCA) was used to combine highly correlated variables thus reducing the number of variables even further.  This can also help to reduce overfitting and computtions are easier (faster) with less variables).  When variables are combines, however, some information is lost and this can also affect the results we get fromt he classification model.  Therefore models were fit using both data that was preprocessed as well as data that was not preprocessed to see if there was any difference in the accuracy figures obtained.
+
+
+## Processing the Data
+
+
+
 ## Partition the training dataset
+The **train** dataset was partitioned to get a new training set and a validation set.  The **test** dataset was held back to be used with the final model at the end of the exercise. 
 
 ```{r dataPartition}
         inTrain <- createDataPartition(train$classe, p = 0.70, list = FALSE)
@@ -61,8 +93,23 @@ Therefore preprocess, method pca as there are some highly correlated variables. 
         validset <- train[-inTrain, ]
 ```
 
+## Cross Validation
+A 5-fold cross validation method was applied when training the model.
+
+```{r setTrainCtrl}
+        traincontrol <- trainControl(method = "cv", number = 5)
+```
+
+## Prediction models to be used
+It was decided that the following models will be fitted and the one with the highest accuracy will be selected for the final predictions.
+
+* Random forest
+* Boosting
+* Classification tree
+
+
 ## Fit Models
-Apply PCA to trainset and validset
+PCA was applied to **trainset** and **validset**.
 
 ```{r preProcSets}
         preProctrain <- preProcess(trainset[,-53], method = "pca")
@@ -71,70 +118,50 @@ Apply PCA to trainset and validset
         validPP <- predict(preProcvalid, validset)
 ```
 
-```{r fitModelPP}
-        traincontrol <- trainControl(method = "cv", number = 5)
+### Random forest
+The random forest algorithm was applied to both the preprocessed data as well as the unprocessed data.
 
+```{r rfmodel}
         set.seed(999)
-        RFtrainPP <- train(classe ~ ., data = trainPP, method = "rf", 
-                        trControl = traincontrol) #.971
+        RFtrainPP <- train(classe ~ ., data = trainPP, method = "rf", trControl = traincontrol)
+        RFtrain <- train(classe ~ ., data = trainset, method = "rf", trControl = traincontrol)
         RFtrainPP
-        
-        set.seed(999)
-        GBMtrainPP <- train(classe ~ ., data = trainPP, method = "gbm", 
-                       trControl = traincontrol) #.814
-        GBMtrainPP
-        
-        set.seed(999)
-        CTtrainPP <- train(classe ~ ., data = trainPP, method = "rpart", 
-                        trControl = traincontrol) #.425
-        CTtrainPP
-```
-
-SUmmarize accuracies in table and select the highest. Apply to validPP dataset.
-Predict new values using valid preprocessed dataset ie. validPP.
-
-```{r predvalidPP}
-        predRF <- predict(RFtrainPP,validPP)
-        confusionMatrix(predRF, validPP$classe)
-        #validPP$predRight <- pred==validPP$classe
-        #table(pred, validPP$classe)
-
-```
-
-Decision made to use data that was not PCAed. since information was lost
-
-```{r fitModels}
-        traincontrol <- trainControl(method = "cv", number = 5)
-
-        set.seed(999)
-        RFtrain <- train(classe ~ ., data = trainset, method = "rf", 
-                        trControl = traincontrol) #.991
         RFtrain
-        
-        set.seed(999)
-        GBMtrain <- train(classe ~ ., data = trainset, method = "gbm", 
-                       trControl = traincontrol) #.
-        GBMtrain
-        
-        set.seed(999)
-        CTtrain <- train(classe ~ ., data = trainset, method = "rpart", 
-                        trControl = traincontrol) #
-        CTtrain
-
 ```
-Compare accuracies and errors to previous models in same table.
 
-Select model and run on validset data.  Compare with previous values.
+The accuracy with the preprocessed data is 0.97 compared to 0.99 with the unprocessed data.  THis is an almost perfect result for the random forest method applied to the unprocessed data so this model was applied to the validation set and the confusion matrix checked.
 
 ```{r predvalid}
         predvalidRF <- predict(RFtrain, validset)
         confusionMatrix(predvalidRF, validset$classe) #0.9931
-        #validPP$predRight <- pred==validPP$classe
-        #table(pred, validPP$classe)
+```
+ This gives an accuracy of over 99% and is a good option for the final model.  However, the other models were still checked for comparison.
+ 
+### Boosting
+```{r gbmmodel}
+        set.seed(999)
+        GBMtrainPP <- train(classe ~ ., data = trainPP, method = "gbm", trControl = traincontrol)
+        GBMtrain <- train(classe ~ ., data = trainset, method = "gbm", trControl = traincontrol)
+        GBMtrainPP
+        GBMtrain
+```
+The accuracy for the preprocessed data was 0.84 compared to 0.96 for the unprocessed data.  This is less than the accuracy for random forest and was not considered.
+
+### Classification tree
+```{r}
+        set.seed(999)
+        CTtrainPP <- train(classe ~ ., data = trainPP, method = "rpart", trControl = traincontrol)
+        CTtrain <- train(classe ~ ., data = trainset, method = "rpart", trControl = traincontrol)
+        CTtrainPP
+        CTtrain
 
 ```
+ ```
+The accuracy for the preprocessed data was 0.42 compared to ?? for the unprocessed data.  This is less than the accuracy for random forest and was not considered.
 
-Use model on test data.
+## Test data
+The random forest model was applied the test data.
+
 ```{r predtest}
         predict(RFtrain, test)
 ```
