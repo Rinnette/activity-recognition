@@ -29,6 +29,7 @@ The data used is the Weight Lifting Exercises dataset obtained from Human Activi
 ```
 
 ## Exploratory analysis & Data processing
+
 The structure of the dataset was checked as well as the dimensions of the training and testing datasets.
 
 ```{r showstr, results = "hide"}
@@ -41,16 +42,16 @@ The structure of the dataset was checked as well as the dimensions of the traini
         dim(training); dim(testing)
 ```
 
-There are 160 variables which need to be examined to determine if all the variables should be used in the models.  Both the training and testing dataset were processed as follows:
+There are 160 variables which need to be examined to determine if all the variables should be used in the models.  Both the training and testing datasets were processed as follows:
 
-1. The first seven columns of the datasets seem unnecessary for predicting the outcome as they contain information such as the names of the persons involved in the exercise and time stamps. 
+1. The first seven columns of the datasets seemed unnecessary for predicting the outcome as they contain information such as the names of the persons involved in the exercise and time stamps. 
 
 ```{r rmFirst7}
         # Remove first 7 columns
         train <- training[, -c(1:7)]; test <- testing[, -c(1:7)]
 ```
 
-2. Columns with little or no variance were removed since these columns will have little or no variation as they consist mainly of a single value.
+2. Columns with little or no variance were removed since these columns consist mainly of a single value.
 
 ```{r rmNearZero}
         # Remove columns with near zero variance
@@ -58,7 +59,7 @@ There are 160 variables which need to be examined to determine if all the variab
         test <- test[ , -nearZeroVar(test)]
 ```
 
-3. Some columns contained more than 97% NAs even after removal of near zero variance columns. The number of NAs 
+3. Some columns contained more than 97% NAs even after removal of near zero variance columns. 
 
 ```{r checkNAs, results = "hide"}
         # Check sum of NAs in each column
@@ -66,7 +67,7 @@ There are 160 variables which need to be examined to determine if all the variab
                 checkNA
 ```
 
-It was noted that all the columns with NAs contain the same amount of NAs, ie. 19 216, which is over 97% of the total number of values in the column.  These columns were removed instead of replacing the NAs with 0's, as the presence of so many columns with 0's may skew the model.
+It was noted that all the columns with NAs contain the same amount of NAs, ie. 19 216, which is over 97% of the total number of values in the column.  These columns were removed instead of replacing the NAs with 0's, as the presence of so many columns with mainly 0's may skew the model.
 
 ```{r rmNAs}
         # Remove columns with more than 90% NA's
@@ -74,19 +75,25 @@ It was noted that all the columns with NAs contain the same amount of NAs, ie. 1
         test <- test[ , which(colMeans(is.na(test)) < 0.9)]
 ```
 
-The number of variables has been reduced to 53 including the outcome variable *classe*.
+The number of variables has been reduced to 53 including the outcome variable *classe*. The *classe* variable is a factor variable that takes the values A, B, C, D or E depending on the way the repetition of the bicep curl was performed (described in the Overview).
+
+```{r showclasse}
+        # Values of classe
+        unique(train$classe)
+```
 
 The correlation among the remaining variables was then checked to determine whether the number of variables could be further reduced.  The *classe* variable was not included in the correlation matrix created.  The values obtained are plotted in the figure below.  The darkest values show correlation close to 1 with blue representing positive correlation and red representing negative correlation.
 
 ```{r corrPlot, fig.width=7, fig.height=7}
         corrMatrix <- cor(train[, -53])
         corrplot(corrMatrix, method = "color", type = "lower", order = "AOE")
-
 ```
 
-The plot shows that several variables are highly correlated therefore the preprocessing method, Principle Component Analysis (PCA) was used to combine highly correlated variables thus reducing the number of variables even further.  Using PCA can also help to reduce overfitting and computations are easier (faster) with less variables.  Note however that when variables are combined some information is lost and this can affect the accuracy of the classification model.  The models below were therefore fitted using both the data that was preprocessed, as well as the data that was not preprocessed to compare the accuracy figures obtained.
+The plot shows that several variables are highly correlated therefore the preprocessing method, Principle Component Analysis (PCA) was applied to the datasets to combine highly correlated variables thus reducing the number of variables even further.  Using PCA also helps to reduce overfitting and computations are easier (faster) with less variables.  Note, however, that when variables are combined some information is lost and this can affect the accuracy of the classification model.  The models below were therefore fitted using both the data that was preprocessed, as well as the data that was not preprocessed to compare the accuracy figures obtained.
+
 
 ## Partition the **train** dataset
+
 The **train** dataset was partitioned to get a new training set (**trainset**) and a validation set (**validset**).  The **test** dataset was held back to be used with the final model at the end of the exercise. 
 
 ```{r dataPartition}
@@ -95,14 +102,18 @@ The **train** dataset was partitioned to get a new training set (**trainset**) a
         validset <- train[-inTrain, ]
 ```
 
+
 ## Cross Validation
+
 A 5-fold cross validation method was applied when training the model.
 
 ```{r setTrainCtrl}
         traincontrol <- trainControl(method = "cv", number = 5)
 ```
 
+
 ## Prediction models to be used
+
 The following models were fitted and the one with the highest accuracy was selected for the final predictions.
 
 * Random forest
@@ -111,6 +122,7 @@ The following models were fitted and the one with the highest accuracy was selec
 
 
 ## Model fitting and selection
+
 PCA was applied to **trainset** and **validset**. The number of variables were reduced to 26 including the outcome variable *classe*.
 
 ```{r preProcSets}
@@ -120,66 +132,74 @@ PCA was applied to **trainset** and **validset**. The number of variables were r
         validPP <- predict(preProcvalid, validset)
 ```
 
+
 ### Random forest
+
 The random forest algorithm was applied to both the preprocessed data as well as the unprocessed data.
 
 ```{r rfmodel}
         set.seed(999)
-        # RFtrainPP <- train(classe ~ ., data = trainPP, method = "rf", trControl = traincontrol)
-        # RFtrain <- train(classe ~ ., data = trainset, method = "rf", trControl = traincontrol)
-        # RFtrainPP
-        # RFtrain
+        RFtrainPP <- train(classe ~ ., data = trainPP, method = "rf", trControl = traincontrol)
+        RFtrain <- train(classe ~ ., data = trainset, method = "rf", trControl = traincontrol)
+        RFtrainPP
+        RFtrain
 ```
 
 The accuracy with the unprocessed data was higher at 0.99 compared to the preprocessed data at 0.97.  The random forest model obtained with the unprocessed data was then applied to the validation set.
 
 ```{r predvalid}
-        # predvalidRF <- predict(RFtrain, validset)
-        # confusionMatrix(predvalidRF, validset$classe)
+        predvalidRF <- predict(RFtrain, validset)
+        confusionMatrix(predvalidRF, validset$classe)
 ```
 
 An accuracy value of over 99% was obtained.  The other models, however, were still checked for comparison.
  
 ### Boosting
+
 ```{r gbmmodel, results = "hide"}
-        # set.seed(999)
-        # GBMtrainPP <- train(classe ~ ., data = trainPP, method = "gbm", trControl = traincontrol)
-        # GBMtrain <- train(classe ~ ., data = trainset, method = "gbm", trControl = traincontrol)
-        # GBMtrainPP
-        # GBMtrain
+        set.seed(999)
+        GBMtrainPP <- train(classe ~ ., data = trainPP, method = "gbm", trControl = traincontrol)
+        GBMtrain <- train(classe ~ ., data = trainset, method = "gbm", trControl = traincontrol)
+        GBMtrainPP
+        GBMtrain
 ```
 
-The accuracy with the unprocessed data was higher at 0.96 compared to the preprocessed data at 0.82.  This is close to the accuracy obtained for random forest but still less so it was not considered.
+The accuracy with the unprocessed data was higher at 0.96 compared to the preprocessed data at 0.82.  This is less than the figures for random forest so it was not considered for the final model.
 
 ### Classification tree
+
 ```{r ctmodel, results = "hide"}
-        # set.seed(999)
-        # CTtrainPP <- train(classe ~ ., data = trainPP, method = "rpart", trControl = traincontrol)
-        # CTtrain <- train(classe ~ ., data = trainset, method = "rpart", trControl = traincontrol)
-        # CTtrainPP
-        # CTtrain
+        set.seed(999)
+        CTtrainPP <- train(classe ~ ., data = trainPP, method = "rpart", trControl = traincontrol)
+        CTtrain <- train(classe ~ ., data = trainset, method = "rpart", trControl = traincontrol)
+        CTtrainPP
+        CTtrain
 ```
 
-The accuracy with the unprocessed data was higher at 0.50 compared to the preprocessed data at 0.42. This is much less than the accuracy for random forest and was not considered.
+The accuracy with the unprocessed data was higher at 0.50 compared to the preprocessed data at 0.42. This is much less than the accuracy for random forest and was therefore not considered.
 
 ### Model selection
-Generally, the accuracy for models fitted using the preprocessed data was smaller than for the corresponding unprocessed data probably because information was lost when the variables were combined. 
+
+Generally, the accuracy for models fitted using the preprocessed data was smaller than for the corresponding unprocessed data.  While PCA might improve the speed in which the models are fitted, it loses accuracy probably because information was lost when the variables were combined. 
 
 The random forest model was therefore selected with no preprocessing.
 
-## Test data
+
+## Applying selected model
+
 The selected model was applied to the test data.
 
 ```{r predtest}
-        #predict(RFtrain, test)
+        predict(RFtrain, test)
 ```
 
 
-## Discussion
+## Hardware and software used
 
-
+The version of R used is 3.6.2. in RStudio Version 1.2.5033 on the Windows 10 operation system.
 
 
 ## References
+
 1. Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
 
