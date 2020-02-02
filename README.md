@@ -1,2 +1,2 @@
 # activity-recognition
-This analysis quantifies how well participants perform a particular activity
+This analysis predicts how well participants perform a particular activity
