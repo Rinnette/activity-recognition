@@ -92,20 +92,18 @@ The correlation among the remaining variables was then checked to determine whet
 The plot shows that several variables are highly correlated therefore the preprocessing method, Principle Component Analysis (PCA) was applied to the datasets to combine highly correlated variables thus reducing the number of variables even further.  Using PCA also helps to reduce overfitting and computations are easier (faster) with less variables.  Note, however, that when variables are combined some information is lost and this can affect the accuracy of the classification model.  The models below were therefore fitted using both the data that was preprocessed, as well as the data that was not preprocessed to compare the accuracy figures obtained.
 
 
-## Partition the **train** dataset
+## Cross Validation
 
-The **train** dataset was partitioned to get a new training set (**trainset**) and a validation set (**validset**).  The **test** dataset was held back to be used with the final model at the end of the exercise. 
+The **train** dataset was partitioned to get a new training set (**trainset**) and a validation set (**validset**).  **trainset** was used to train the model and the **validset** was used to test the fitted model.  The **test** dataset was held back to be used with the final model at the end of the exercise. 
 
 ```{r dataPartition}
+        set.seed(99)
         inTrain <- createDataPartition(train$classe, p = 0.70, list = FALSE)
         trainset <- train[inTrain, ]
         validset <- train[-inTrain, ]
 ```
 
-
-## Cross Validation
-
-A 5-fold cross validation method was applied when training the model.
+In addition, a 5-fold cross validation method was applied when training the model.
 
 ```{r setTrainCtrl}
         traincontrol <- trainControl(method = "cv", number = 5)
@@ -149,11 +147,20 @@ The accuracy with the unprocessed data was higher at 0.99 compared to the prepro
 
 ```{r predvalid}
         predvalidRF <- predict(RFtrain, validset)
-        confusionMatrix(predvalidRF, validset$classe)
+        CM <- confusionMatrix(predvalidRF, validset$classe)
+        CM
 ```
 
-An accuracy value of over 99% was obtained.  The other models, however, were still checked for comparison.
- 
+#### Out-of-sample error
+
+The **out of sample error** can be calculated and is *1 - Accuracy*.
+
+```{r calcError}
+        oos <- 1 - CM$overall['Accuracy']
+        paste("Out-of-sample error is ", oos)
+```
+
+
 ### Boosting
 
 ```{r gbmmodel, results = "hide"}
